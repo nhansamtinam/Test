@@ -16,6 +16,7 @@ local gui = player:WaitForChild("PlayerGui")
 local _isInGame = false
 local currentFruit = nil
 local currentHumanoid = nil
+local characterReady = false
 
 -- 💥 Danh sách kỹ năng theo trái ác quỷ
 local skills = {
@@ -57,9 +58,13 @@ end
 -- 🧠 Gọi kỹ năng trái
 local function castSkill(fruit, skill)
     local char = player.Character or player.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-    local origin, target = hrp.Position, mouse.Hit.Position
+    local hit = mouse.Hit
+    if not hit then return end
+
+    local origin, target = hrp.Position, hit.Position
     local dir = (target - origin).Unit * 45
     local ray = {
         Normal = Vector3.yAxis,
@@ -107,13 +112,17 @@ end
 local function setupCharacter(character)
     currentHumanoid = character:WaitForChild("Humanoid")
     task.delay(2, function()
-        _isInGame = true
+        updateCurrentFruit()
+        characterReady = true
     end)
 end
 
 -- 👂 Theo dõi nhân vật mới
 if player.Character then setupCharacter(player.Character) end
-player.CharacterAdded:Connect(setupCharacter)
+player.CharacterAdded:Connect(function(char)
+    characterReady = false
+    setupCharacter(char)
+end)
 
 -- 🕵️ Theo dõi thay đổi trái
 task.spawn(watchSlotChanges)
@@ -130,25 +139,22 @@ task.spawn(function()
                 task.delay(1, function()
                     _isInGame = true
                     fastTeleport()
-                    updateCurrentFruit() -- Cập nhật trái hiện tại sau khi vào game
-                    task.delay(2, function()
-                        watchSlotChanges() -- Đảm bảo theo dõi lại slot nếu mất kết nối
-                    end)
                 end)
             end
             task.wait(5)
         end
         repeat task.wait(0.5) until not (player.Character and player.Character:FindFirstChild("HumanoidRootPart"))
         _isInGame = false
+        characterReady = false
     end
 end)
 
 -- 🔁 Tự dùng kỹ năng liên tục khi đang trong game
 task.spawn(function()
     while true do
-        if _G.auto and _isInGame and currentFruit and skills[currentFruit] then
+        if _G.auto and _isInGame and characterReady and currentFruit and skills[currentFruit] then
             for _, skill in ipairs(skills[currentFruit]) do
-                if not _isInGame then break end
+                if not _isInGame or not characterReady then break end
                 castSkill(currentFruit, skill)
                 task.wait(0.15)
             end

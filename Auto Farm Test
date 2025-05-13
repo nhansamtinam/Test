@@ -55,17 +55,18 @@ local function watchSlotChanges()
     updateCurrentFruit()
 end
 
--- 🧠 Gọi kỹ năng trái
+-- 💥 Gọi kỹ năng trái
 local function castSkill(fruit, skill)
+    if not fruit or not skill then return end
+
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    if not hrp or not mouse.Hit then return end
 
     local hit = mouse.Hit
-    if not hit then return end
-
     local origin, target = hrp.Position, hit.Position
     local dir = (target - origin).Unit * 45
+
     local ray = {
         Normal = Vector3.yAxis,
         Direction = dir,
@@ -93,7 +94,7 @@ local function findPlayButton()
     return nil
 end
 
--- ⌨️ Mô phỏng nhấn Enter
+-- ⌨️ Nhấn Enter
 local function pressEnter()
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
     task.wait(0.05)
@@ -111,26 +112,28 @@ end
 -- 🧠 Gắn nhân vật hiện tại và cập nhật trái sau khi reset
 local function setupCharacter(character)
     currentHumanoid = character:WaitForChild("Humanoid")
+    local hrp = character:WaitForChild("HumanoidRootPart", 5)
+    if not hrp then return end
+
     task.delay(2, function()
         updateCurrentFruit()
         characterReady = true
-        -- Sau khi nhân vật sẵn sàng, gọi lại kỹ năng để kiểm tra
-        castSkill(currentFruit, skills[currentFruit][1])  -- Gọi kỹ năng đầu tiên sau khi respawn
+        if currentFruit and skills[currentFruit] then
+            castSkill(currentFruit, skills[currentFruit][1])
+        end
     end)
 end
 
--- 👂 Theo dõi nhân vật mới và đảm bảo rằng sau khi respawn script sẽ chạy lại bình thường
+-- 👂 Theo dõi nhân vật mới
 if player.Character then setupCharacter(player.Character) end
+
 player.CharacterAdded:Connect(function(char)
+    _isInGame = true
     characterReady = false
-    task.wait(0.5)  -- Đảm bảo nhân vật đã vào game đầy đủ
-    setupCharacter(char)  -- Cập nhật lại trái, kỹ năng và các sự kiện cần thiết
+    setupCharacter(char)
 end)
 
--- 🕵️ Theo dõi thay đổi trái
-task.spawn(watchSlotChanges)
-
--- ▶️ Tự nhấn Play và dịch chuyển vào game
+-- ▶️ Tự nhấn Play và dịch chuyển
 task.spawn(function()
     while true do
         while not (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) do
@@ -152,7 +155,7 @@ task.spawn(function()
     end
 end)
 
--- 🔁 Tự dùng kỹ năng liên tục khi đang trong game
+-- 🔁 Tự dùng kỹ năng liên tục
 task.spawn(function()
     while true do
         if _G.auto and _isInGame and characterReady and currentFruit and skills[currentFruit] then

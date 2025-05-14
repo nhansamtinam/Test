@@ -9,7 +9,6 @@ local RunService = game:GetService("RunService")
 
 -- 🧍 Người chơi
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
 local gui = player:WaitForChild("PlayerGui")
 
 -- ⚙️ Biến trạng thái
@@ -55,24 +54,23 @@ local function watchSlotChanges()
     updateCurrentFruit()
 end
 
--- 💥 Gọi kỹ năng trái
+-- 💥 Gọi kỹ năng trái — dùng hướng nhìn thay vì chuột
 local function castSkill(fruit, skill)
     if not fruit or not skill then return end
 
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp or not mouse.Hit then return end
+    if not hrp then return end
 
-    local hit = mouse.Hit
-    local origin, target = hrp.Position, hit.Position
-    local dir = (target - origin).Unit * 45
+    local target = hrp.Position + hrp.CFrame.LookVector * 50
+    local dir = (target - hrp.Position).Unit * 45
 
     local ray = {
         Normal = Vector3.yAxis,
         Direction = dir,
-        Origin = origin,
+        Origin = hrp.Position,
         Instance = workspace.Map:FindFirstChildWhichIsA("BasePart") or workspace.Terrain,
-        Distance = (target - origin).Magnitude,
+        Distance = (target - hrp.Position).Magnitude,
         Material = Enum.Material.Grass,
         Position = target
     }
@@ -115,12 +113,10 @@ local function setupCharacter(character)
     local hrp = character:WaitForChild("HumanoidRootPart", 5)
     if not hrp then return end
 
-    task.delay(2, function()
+    task.spawn(function()
+        task.wait(2)
         updateCurrentFruit()
         characterReady = true
-        if currentFruit and skills[currentFruit] then
-            castSkill(currentFruit, skills[currentFruit][1])
-        end
     end)
 end
 
@@ -130,6 +126,7 @@ if player.Character then setupCharacter(player.Character) end
 player.CharacterAdded:Connect(function(char)
     _isInGame = true
     characterReady = false
+    updateCurrentFruit()
     setupCharacter(char)
 end)
 
@@ -162,10 +159,13 @@ task.spawn(function()
             for _, skill in ipairs(skills[currentFruit]) do
                 if not _isInGame or not characterReady then break end
                 castSkill(currentFruit, skill)
-                task.wait(0.15)
+                task.wait(0.25) -- có thể điều chỉnh nếu cần chậm lại
             end
         else
             task.wait(0.5)
         end
     end
 end)
+
+-- ▶️ Theo dõi thay đổi slot trái
+watchSlotChanges()

@@ -98,16 +98,25 @@ local function fastTeleport()
     hrp.CFrame = CFrame.new(-1420, 798.93, -85)
 end
 
--- 🧠 Cài nhân vật
+-- 🧠 Cài nhân vật (đã sửa ổn định hơn)
 local function setupCharacter(character)
-    currentHumanoid = character:WaitForChild("Humanoid")
+    characterReady = false
+    currentHumanoid = character:WaitForChild("Humanoid", 5)
     local hrp = character:WaitForChild("HumanoidRootPart", 5)
-    if not hrp then return end
+    if not hrp or not currentHumanoid then return end
 
     task.spawn(function()
-        task.wait(3) -- chờ nhân vật load hoàn toàn
-        updateCurrentFruit()
-        characterReady = true
+        local maxWait = 5
+        local elapsed = 0
+        while elapsed < maxWait do
+            updateCurrentFruit()
+            if currentFruit and hrp.Parent == character and hrp:IsDescendantOf(game) then
+                characterReady = true
+                break
+            end
+            elapsed += 0.2
+            task.wait(0.2)
+        end
     end)
 end
 
@@ -127,7 +136,7 @@ task.spawn(function()
             local playButton = findPlayButton()
             if playButton then
                 GuiService.SelectedObject = playButton
-                task.wait(6)
+                task.wait(5)
                 pressEnter()
                 task.delay(1, function()
                     fastTeleport()

@@ -1,6 +1,6 @@
 _G.auto = true
 
--- 📦 Dịch vụ Roblox
+-- 📦 Dịch vụ ROBLOX
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService = game:GetService("GuiService")

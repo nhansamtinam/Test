@@ -1,6 +1,6 @@
 _G.auto = true
 
--- 📦 Dịch vụ Roblox
+-- 📦 Dịch vụ RobloX
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService = game:GetService("GuiService")
@@ -32,11 +32,18 @@ local skills = {
 -- 🧬 Cập nhật trái hiện tại
 local function updateCurrentFruit()
     local mainData = player:FindFirstChild("MAIN_DATA")
-    if not mainData then return end
+    if not mainData then
+        warn("Không tìm thấy MAIN_DATA")
+        return
+    end
     local currentSlot = mainData:FindFirstChild("Slot")
-    if not currentSlot then return end
+    if not currentSlot then
+        warn("Không tìm thấy Slot")
+        return
+    end
     local slotValue = mainData.Slots:FindFirstChild(tostring(currentSlot.Value))
     currentFruit = slotValue and slotValue.Value or nil
+    print("Cập nhật trái hiện tại:", currentFruit)
 end
 
 -- 👀 Theo dõi thay đổi slot trái
@@ -66,6 +73,7 @@ local function castSkill(fruit, skill)
         Material = Enum.Material.Grass,
         Position = target
     }
+    print("Gọi kỹ năng:", skill)
     ReplicatedStorage.Replicator:InvokeServer(fruit, skill, {Ground = {Position = target}, MouseRay = ray})
     ReplicatedStorage.ReplicatorNoYield:FireServer("ClientData", "UpdateData", {RootCF = hrp.CFrame, MouseRay = ray})
 end
@@ -85,6 +93,7 @@ end
 
 -- ⌨️ Nhấn Enter
 local function pressEnter()
+    print("Nhấn Enter để chọn Play")
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
     task.wait(0.05)
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
@@ -96,14 +105,19 @@ local function fastTeleport()
     local hrp
     repeat hrp = character:FindFirstChild("HumanoidRootPart") task.wait() until hrp
     hrp.CFrame = CFrame.new(-1420, 798.93, -85)
+    print("Dịch chuyển đến vị trí autofarm")
 end
 
--- 🧠 Cài nhân vật (đã sửa ổn định hơn)
+-- 🧠 Cài nhân vật
 local function setupCharacter(character)
+    print("Thiết lập nhân vật...")
     characterReady = false
     currentHumanoid = character:WaitForChild("Humanoid", 5)
     local hrp = character:WaitForChild("HumanoidRootPart", 5)
-    if not hrp or not currentHumanoid then return end
+    if not hrp or not currentHumanoid then
+        warn("Không tìm thấy Humanoid hoặc HumanoidRootPart")
+        return
+    end
 
     task.spawn(function()
         local maxWait = 5
@@ -112,10 +126,14 @@ local function setupCharacter(character)
             updateCurrentFruit()
             if currentFruit and hrp.Parent == character and hrp:IsDescendantOf(game) then
                 characterReady = true
+                print("Nhân vật đã sẵn sàng. Trái:", currentFruit)
                 break
             end
             elapsed += 0.2
             task.wait(0.2)
+        end
+        if not characterReady then
+            warn("Thiết lập nhân vật thất bại sau timeout.")
         end
     end)
 end
@@ -124,8 +142,9 @@ end
 if player.Character then setupCharacter(player.Character) end
 
 player.CharacterAdded:Connect(function(char)
-    characterReady = false
+    print("Phát hiện nhân vật mới.")
     _isInGame = true
+    characterReady = false
     setupCharacter(char)
 end)
 
@@ -135,16 +154,20 @@ task.spawn(function()
         while not (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) do
             local playButton = findPlayButton()
             if playButton then
+                print("Đã tìm thấy nút Play.")
                 GuiService.SelectedObject = playButton
                 task.wait(5)
                 pressEnter()
                 task.delay(1, function()
                     fastTeleport()
                 end)
+            else
+                print("Không tìm thấy nút Play.")
             end
             task.wait(5)
         end
         repeat task.wait(0.5) until not (player.Character and player.Character:FindFirstChild("HumanoidRootPart"))
+        print("Nhân vật bị xóa hoặc reset.")
         _isInGame = false
         characterReady = false
     end
@@ -160,6 +183,11 @@ task.spawn(function()
                 task.wait(0.25)
             end
         else
+            if not characterReady then
+                print("Chờ nhân vật sẵn sàng...")
+            elseif not currentFruit then
+                print("Không có trái để dùng kỹ năng.")
+            end
             task.wait(0.5)
         end
     end

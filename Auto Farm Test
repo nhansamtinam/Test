@@ -1,6 +1,7 @@
+-- ✅ Kích hoạt chế độ tự động dùng kỹ năng
 _G.auto = true
 
--- 📦 Dịch vụ Roblox
+-- 📦 Dịch vụ RobloX
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService = game:GetService("GuiService")
@@ -32,15 +33,9 @@ local skills = {
 -- 🧬 Cập nhật trái hiện tại
 local function updateCurrentFruit()
     local mainData = player:FindFirstChild("MAIN_DATA")
-    if not mainData then
-        warn("Không tìm thấy MAIN_DATA")
-        return
-    end
+    if not mainData then warn("Không tìm thấy MAIN_DATA") return end
     local currentSlot = mainData:FindFirstChild("Slot")
-    if not currentSlot then
-        warn("Không tìm thấy Slot")
-        return
-    end
+    if not currentSlot then warn("Không tìm thấy Slot") return end
     local slotValue = mainData.Slots:FindFirstChild(tostring(currentSlot.Value))
     currentFruit = slotValue and slotValue.Value or nil
     print("Cập nhật trái hiện tại:", currentFruit)
@@ -58,10 +53,16 @@ end
 
 -- 💥 Gọi kỹ năng trái
 local function castSkill(fruit, skill)
-    if not fruit or not skill then return end
+    if not fruit or not skill then
+        warn("[castSkill] Thiếu fruit hoặc skill:", fruit, skill)
+        return
+    end
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    if not hrp then
+        warn("[castSkill] Không tìm thấy HRP")
+        return
+    end
     local target = hrp.Position + hrp.CFrame.LookVector * 50
     local dir = (target - hrp.Position).Unit * 45
     local ray = {
@@ -73,9 +74,21 @@ local function castSkill(fruit, skill)
         Material = Enum.Material.Grass,
         Position = target
     }
-    print("Gọi kỹ năng:", skill)
-    ReplicatedStorage.Replicator:InvokeServer(fruit, skill, {Ground = {Position = target}, MouseRay = ray})
-    ReplicatedStorage.ReplicatorNoYield:FireServer("ClientData", "UpdateData", {RootCF = hrp.CFrame, MouseRay = ray})
+
+    print("[castSkill] Gọi kỹ năng:", skill, "Trái:", fruit)
+    local success, err = pcall(function()
+        ReplicatedStorage.Replicator:InvokeServer(fruit, skill, {
+            Ground = {Position = target},
+            MouseRay = ray
+        })
+        ReplicatedStorage.ReplicatorNoYield:FireServer("ClientData", "UpdateData", {
+            RootCF = hrp.CFrame,
+            MouseRay = ray
+        })
+    end)
+    if not success then
+        warn("[castSkill] Gọi skill thất bại:", err)
+    end
 end
 
 -- 🔁 Spam kỹ năng
@@ -85,12 +98,17 @@ local function startSkillLoop()
     skillLoopRunning = true
     task.spawn(function()
         while true do
-            print("⏳ Tick kiểm tra cast skill...")
+            print("[SkillLoop] Tick kiểm tra cast skill...")
+            print("  _G.auto:", _G.auto)
+            print("  _isInGame:", _isInGame)
+            print("  characterReady:", characterReady)
+            print("  currentFruit:", currentFruit)
+
             if _G.auto and _isInGame and characterReady and currentFruit and skills[currentFruit] then
                 for _, skill in ipairs(skills[currentFruit]) do
                     if not (_isInGame and characterReady) then break end
                     castSkill(currentFruit, skill)
-                    task.wait(0.25)
+                    task.wait(0.5)
                 end
             else
                 if not characterReady then

@@ -1,7 +1,7 @@
 -- ✅ Kích hoạt chế độ tự động dùng kỹ năng
 _G.auto = true
 
--- 📦 Dịch vụ Roblox
+-- 📦 Dịch vụ RobloX
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService = game:GetService("GuiService")

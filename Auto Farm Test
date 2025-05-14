@@ -30,6 +30,17 @@ local skills = {
     Okuchi = {"PrimalRage", "ArcticBreath", "DevastatingDrop", "HallowedCuts", "GlacialCoat", "DivineSerpent"},
 }
 
+-- ✅ Kiểm tra cooldown
+local function isSkillReady(skillName)
+    local cdFolder = player:FindFirstChild("Cooldowns")
+    if not cdFolder then return true end
+    local nested = cdFolder:FindFirstChild("Cooldowns")
+    if not nested then return true end
+    local skillCD = nested:FindFirstChild(skillName)
+    if not skillCD then return true end
+    return skillCD.Value <= 0
+end
+
 -- 🧬 Cập nhật trái hiện tại
 local function updateCurrentFruit()
     local mainData = player:FindFirstChild("MAIN_DATA")
@@ -57,6 +68,12 @@ local function castSkill(fruit, skill)
         warn("[castSkill] Thiếu fruit hoặc skill:", fruit, skill)
         return
     end
+
+    if not isSkillReady(skill) then
+        -- print("[castSkill] Chiêu đang hồi:", skill)
+        return
+    end
+
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then
@@ -75,7 +92,6 @@ local function castSkill(fruit, skill)
         Position = target
     }
 
-    print("[castSkill] Gọi kỹ năng:", skill, "Trái:", fruit)
     local success, err = pcall(function()
         ReplicatedStorage.Replicator:InvokeServer(fruit, skill, {
             Ground = {Position = target},
@@ -98,24 +114,13 @@ local function startSkillLoop()
     skillLoopRunning = true
     task.spawn(function()
         while true do
-            print("[SkillLoop] Tick kiểm tra cast skill...")
-            print("  _G.auto:", _G.auto)
-            print("  _isInGame:", _isInGame)
-            print("  characterReady:", characterReady)
-            print("  currentFruit:", currentFruit)
-
             if _G.auto and _isInGame and characterReady and currentFruit and skills[currentFruit] then
                 for _, skill in ipairs(skills[currentFruit]) do
                     if not (_isInGame and characterReady) then break end
                     castSkill(currentFruit, skill)
-                    task.wait(0.5)
+                    task.wait(0.15) -- Thời gian nhỏ hơn để phản hồi nhanh hơn
                 end
             else
-                if not characterReady then
-                    print("Chờ nhân vật sẵn sàng...")
-                elseif not currentFruit then
-                    print("Không có trái để dùng kỹ năng.")
-                end
                 task.wait(0.5)
             end
         end
@@ -137,7 +142,6 @@ end
 
 -- ⌨️ Nhấn Enter
 local function pressEnter()
-    print("Nhấn Enter để chọn Play")
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
     task.wait(0.05)
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
@@ -149,19 +153,14 @@ local function fastTeleport()
     local hrp
     repeat hrp = character:FindFirstChild("HumanoidRootPart") task.wait() until hrp
     hrp.CFrame = CFrame.new(-1420, 798.93, -85)
-    print("Dịch chuyển đến vị trí autofarm")
 end
 
 -- 🧠 Cài nhân vật
 local function setupCharacter(character)
-    print("Thiết lập nhân vật...")
     characterReady = false
     currentHumanoid = character:WaitForChild("Humanoid", 5)
     local hrp = character:WaitForChild("HumanoidRootPart", 5)
-    if not hrp or not currentHumanoid then
-        warn("Không tìm thấy Humanoid hoặc HumanoidRootPart")
-        return
-    end
+    if not hrp or not currentHumanoid then return end
 
     task.spawn(function()
         local maxWait = 5
@@ -170,23 +169,17 @@ local function setupCharacter(character)
             updateCurrentFruit()
             if currentFruit and hrp.Parent == character and hrp:IsDescendantOf(game) then
                 characterReady = true
-                print("Nhân vật đã sẵn sàng. Trái:", currentFruit)
                 break
             end
             elapsed += 0.2
             task.wait(0.2)
-        end
-        if not characterReady then
-            warn("Thiết lập nhân vật thất bại sau timeout.")
         end
     end)
 end
 
 -- 👂 Theo dõi nhân vật mới
 if player.Character then setupCharacter(player.Character) end
-
 player.CharacterAdded:Connect(function(char)
-    print("Phát hiện nhân vật mới.")
     _isInGame = true
     characterReady = false
     setupCharacter(char)
@@ -199,20 +192,14 @@ task.spawn(function()
         while not (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) do
             local playButton = findPlayButton()
             if playButton then
-                print("Đã tìm thấy nút Play.")
                 GuiService.SelectedObject = playButton
                 task.wait(5)
                 pressEnter()
-                task.delay(1, function()
-                    fastTeleport()
-                end)
-            else
-                print("Không tìm thấy nút Play.")
+                task.delay(1, fastTeleport)
             end
             task.wait(5)
         end
         repeat task.wait(0.5) until not (player.Character and player.Character:FindFirstChild("HumanoidRootPart"))
-        print("Nhân vật bị xóa hoặc reset.")
         _isInGame = false
         characterReady = false
     end

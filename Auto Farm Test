@@ -137,7 +137,7 @@ task.spawn(function()
             local playButton = findPlayButton()
             if playButton then
                 GuiService.SelectedObject = playButton
-                task.wait(9)
+                task.wait(7)
                 pressEnter()
                 task.delay(1, function()
                     _isInGame = true

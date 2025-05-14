@@ -78,6 +78,32 @@ local function castSkill(fruit, skill)
     ReplicatedStorage.ReplicatorNoYield:FireServer("ClientData", "UpdateData", {RootCF = hrp.CFrame, MouseRay = ray})
 end
 
+-- 🔁 Spam kỹ năng
+local skillLoopRunning = false
+local function startSkillLoop()
+    if skillLoopRunning then return end
+    skillLoopRunning = true
+    task.spawn(function()
+        while true do
+            print("⏳ Tick kiểm tra cast skill...")
+            if _G.auto and _isInGame and characterReady and currentFruit and skills[currentFruit] then
+                for _, skill in ipairs(skills[currentFruit]) do
+                    if not (_isInGame and characterReady) then break end
+                    castSkill(currentFruit, skill)
+                    task.wait(0.25)
+                end
+            else
+                if not characterReady then
+                    print("Chờ nhân vật sẵn sàng...")
+                elseif not currentFruit then
+                    print("Không có trái để dùng kỹ năng.")
+                end
+                task.wait(0.5)
+            end
+        end
+    end)
+end
+
 -- 🔍 Tìm nút Play
 local function findPlayButton()
     for _, guiObj in ipairs(gui:GetChildren()) do
@@ -146,6 +172,7 @@ player.CharacterAdded:Connect(function(char)
     _isInGame = true
     characterReady = false
     setupCharacter(char)
+    startSkillLoop()
 end)
 
 -- ▶️ Tự nhấn Play và teleport
@@ -173,24 +200,5 @@ task.spawn(function()
     end
 end)
 
--- 🔁 Dùng kỹ năng liên tục
-task.spawn(function()
-    while true do
-        if _G.auto and _isInGame and characterReady and currentFruit and skills[currentFruit] then
-            for _, skill in ipairs(skills[currentFruit]) do
-                if not (_isInGame and characterReady) then break end
-                castSkill(currentFruit, skill)
-                task.wait(0.25)
-            end
-        else
-            if not characterReady then
-                print("Chờ nhân vật sẵn sàng...")
-            elseif not currentFruit then
-                print("Không có trái để dùng kỹ năng.")
-            end
-            task.wait(0.5)
-        end
-    end
-end)
-
 watchSlotChanges()
+startSkillLoop()

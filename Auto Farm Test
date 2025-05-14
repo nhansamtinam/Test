@@ -127,7 +127,7 @@ task.spawn(function()
             local playButton = findPlayButton()
             if playButton then
                 GuiService.SelectedObject = playButton
-                task.wait(7)
+                task.wait(5)
                 pressEnter()
                 task.delay(1, function()
                     fastTeleport()
